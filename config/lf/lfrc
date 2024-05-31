@@ -1,0 +1,136 @@
+set hidden true
+set drawbox true
+set icons true
+set ignorecase true
+set relativenumber true
+set ratios 2:3
+set dirpreviews false
+
+set preview true
+set previewer ~/.config/lf/previewer.sh
+set cursorpreviewfmt "\033[7m"
+
+cmd open_internal ${{
+    case $(file --mime-type "$f" -bL) in
+        text/*|application/json) $EDITOR "$fx" ;;
+        video/*|application/pdf) ~/scripts/bin/open "$f" >/dev/null 2>&1 & ;;
+        *) for f in "$fx"; do
+          ~/scripts/bin/open "$f" 2>/dev/null
+        done ;;
+    esac;
+    disown 2>/dev/null;
+}}
+cmd open open_internal
+
+cmd mkdir ${{
+  printf "Directory Name: "
+  read ans
+  mkdir $ans
+}}
+
+cmd mkfile ${{
+  printf "File Name: "
+  read ans
+  $EDITOR $ans
+}}
+
+cmd show_images ${{
+  if [ "$(echo "$fx" | wc -l)" = "1" ]; then
+    sxiv $(dirname "$fx") &
+  else
+    sxiv $fx &
+  fi;
+}}
+
+cmd unzip_zip ${{
+  unzip $f;
+}}
+
+cmd unzip_7z ${{
+  nix-shell -p p7zip --run '7z x $f';
+}}
+
+cmd unzip_rar ${{
+  NIXPKGS_ALLOW_UNFREE=1 nix-shell -p unrar --run 'unrar x $f';
+}}
+
+cmd unpack ${{
+  typ=$(file --mime-type "$f" -bL);
+  case $(typ) in
+    application/zip)
+      unzip "$f"
+    ;;
+    application/x-tar|application/gzip)
+      tar xzf "$f"
+    ;;
+    application/x-7z-compressed)
+      nix-shell -p p7zip --run "7z x '$f'"
+    ;;
+    application/vnd.rar)
+      NIXPKGS_ALLOW_UNFREE=1 nix-shell -p unrar --run "unrar x '$f'"
+    ;;
+    *)
+      lf -remote "send $id echoerr 'Unknown archive type: $typ'";
+    ;;
+  esac
+}}
+
+cmd sudo_delete ${{
+  echo "Deleting $f..."
+  sudo --reset-timestamp rm -rf "$f"
+}}
+
+# Unset old keys
+map w
+map m
+map n
+map p
+map "'"
+map '"'
+map d}}
+map c
+map e
+map d
+
+# TODO: fzf search through files
+
+# fzf search through directories
+cmd fuzzy_search_dirs ${{
+  dir=$(find . -type d | fzf);
+  if ! [ -z "$dir" ]; then
+    lf -remote "send $id cd $dir";
+  fi
+}}
+
+# Mutations
+map dd      delete
+map sdd     sudo_delete
+map p       paste
+map x       cut
+map y       copy
+map mf      mkfile
+map md      mkdir
+
+# View changes
+map <enter> open_internal
+map <c-o>   open_internal
+map si      show_images
+map .       :set hidden!
+map st      :set sortby time; set info time
+map ss      :set sortby size; set info size
+
+# Search next/prev
+map <tab> search-next
+map <backtab> search-prev
+
+# Traversal keys
+map \\f   fuzzy_search_dirs
+map gdl   cd ~/Downloads/dl
+map gdm   cd ~/Downloads/music
+map gdv   cd ~/dev
+map gdp   cd ~/dump
+map gp    cd ~/Pictures
+map gsc   cd ~/Pictures/screenshots
+map gmnt  cd /run/media/yusuf
+map gdc   cd ~/Documents
+

@@ -1,0 +1,4 @@
+#!/bin/sh
+
+zsh -c "source ~/nixos/config/zsh/zshrc && $@";
+
